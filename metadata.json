@@ -1,0 +1,6 @@
+{
+  "name": "PET SPA",
+  "description": "Aplicación móvil para reservar citas de baño y peluquería para perros en PET SPA con precios en pesos colombianos (COP) y calendario interactivo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

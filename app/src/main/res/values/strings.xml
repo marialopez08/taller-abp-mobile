@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">PET SPA</string>
+    <string name="welcome_message">¡El bienestar de tu mascota comienza aquí!</string>
+    <string name="cta_book_appointment">Reservar una cita</string>
+    <string name="nav_home">Inicio</string>
+    <string name="nav_book">Reservar</string>
+    <string name="nav_my_bookings">Mis reservas</string>
+    <string name="local_storage_notice">Las reservas se guardan únicamente en este dispositivo. Aún no existe sincronización en tiempo real entre diferentes clientes.</string>
+</resources>
