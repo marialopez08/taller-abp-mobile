@@ -179,6 +179,18 @@ El proyecto cuenta con compilación validada y una suite automatizada de **7 pru
 | `ExampleRobolectricTest` | • Recurso `app_name` configurado como `"PET SPA"`.<br>• Siembra automática de los 2 servicios y las 6 tarifas exactas en COP (`$35.000`–`$100.000`) con `0` reservas ficticias iniciales.<br>• Prevención atómica de reservas duplicadas en misma fecha y hora (`SlotAlreadyTaken`).<br>• Cancelación de cita que cambia su estado a `Cancelada` y libera el horario para una nueva reserva.<br>• Bloqueo de domingos (día de descanso) y formato de moneda COP. | Aprobada |
 | `PetSpaUiFlowTest` | • Desplazamiento vertical en **Inicio** mostrando héroe, ambos servicios y aviso de almacenamiento local.<br>• Flujo completo de reserva: **Inicio** → **Servicio** → **Tamaño Mediano (`$45.000 COP`)** → **Calendario** (scroll y selección de hora disponible) → **Formulario** (scroll con teclado y confirmación) → **Confirmación** → **Mis reservas** (cita persistida) → regreso a **Inicio** (sección **Próximas reservas** visible) → apertura limpia de **Reservar**. | Aprobada |
 
+### Mockups pantalla por pantalla
+
+Los mockups visuales de cada una de las 7 pantallas del flujo completo se encuentran organizados en la carpeta [`mockups/`](./mockups/README.md):
+
+- [`mockups/01_inicio.jpg`](./mockups/01_inicio.jpg) — Pantalla de Inicio
+- [`mockups/02_seleccion_servicio.jpg`](./mockups/02_seleccion_servicio.jpg) — Selección de servicio
+- [`mockups/03_tamano_perro.jpg`](./mockups/03_tamano_perro.jpg) — Tamaño del perro y tarifa en COP
+- [`mockups/04_calendario_horarios.jpg`](./mockups/04_calendario_horarios.jpg) — Calendario interactivo y horarios
+- [`mockups/05_formulario_resumen.jpg`](./mockups/05_formulario_resumen.jpg) — Formulario de reserva y resumen
+- [`mockups/06_confirmacion.jpg`](./mockups/06_confirmacion.jpg) — Confirmación de cita
+- [`mockups/07_mis_reservas.jpg`](./mockups/07_mis_reservas.jpg) — Mis reservas y gestión de estados
+
 ### Comandos de verificación ejecutados
 
 - **Compilación del proyecto (`compile_applet` / `:app:assembleDebug`)**: `BUILD SUCCESSFUL` sin errores de recursos, KSP ni Kotlin.
