@@ -1,6 +1,23 @@
 # PET SPA — Aplicación Móvil Android de Reservas Caninas
 
+**Autora:** María Isabel López Figueroa  
+**Curso:** Diseño de Aplicaciones Móviles · Fundación Universitaria Católica del Norte (UCN)  
+**Actividad:** Taller ABP – Entrega 1 · Noviembre de 2026  
+**Presentación:** [presentacion/PET_SPA_Presentacion.pdf](./presentacion/PET_SPA_Presentacion.pdf)
+
 Aplicación nativa para Android desarrollada en **Kotlin** y **Jetpack Compose (Material Design 3)** que permite a los clientes consultar servicios de baño y arreglo estético para perros, calcular precios en **pesos colombianos (COP)** según el tamaño de la mascota, consultar disponibilidad en un calendario interactivo y gestionar sus citas desde el celular.
+
+---
+
+## Situación problema
+
+Escogí el caso de un spa canino pequeño que agenda sus citas por WhatsApp y llamadas. Esto causa tres problemas:
+
+- **Citas cruzadas:** los mensajes se pierden y a veces dos clientes quedan con la misma hora.
+- **Precios poco claros:** el valor cambia según el tamaño del perro, pero el cliente no lo sabe hasta llegar al spa.
+- **Sin historial:** ni el cliente ni el spa ven fácil qué citas están confirmadas, canceladas o ya pasaron.
+
+**Objetivo:** crear una app móvil donde el cliente vea los servicios con su precio exacto, escoja una hora libre en tiempo real y gestione sus citas, guardando todo en la nube de forma segura.
 
 ---
 
@@ -159,6 +176,17 @@ app/src/main/java/com/example/
 - **Pruebas:** JUnit 4, Robolectric `4.16.1`, Compose UI Test (`ui-test-junit4`), `@firebase/rules-unit-testing` y Firebase Local Emulator Suite (Firestore + Auth)
 - **Compatibilidad SDK:** `minSdk = 24` (Android 7.0) • `targetSdk = 36` • `compileSdk = 36`
 - **Application ID:** `com.aistudio.petspa.vqmzrk`
+
+### Justificación tecnológica
+
+| Herramienta | Por qué la escogí |
+|---|---|
+| Kotlin + Jetpack Compose | Es el lenguaje oficial de Android y permite hacer pantallas con menos código. |
+| Cloud Firestore | Varios clientes reservan al tiempo y todos deben ver las mismas horas ocupadas en tiempo real, sin montar un servidor propio. |
+| Firebase Auth con Google | El cliente entra con la cuenta que ya tiene, sin crear otra contraseña, y cada uno ve solo sus citas. |
+| Reglas de seguridad de Firestore | Protegen los datos en el servidor, aunque alguien modifique la app. |
+| MVVM + Repositorio | Separa pantallas, lógica y datos. Gracias a esto pasé de Room a Firestore cambiando solo el repositorio. |
+| Emulador de Firebase + Robolectric | Me permiten probar las reglas y el flujo completo sin usar la base real ni un celular físico. |
 
 ---
 
