@@ -3,7 +3,7 @@
 **Autora:** María Isabel López Figueroa  
 **Curso:** Diseño de Aplicaciones Móviles · Fundación Universitaria Católica del Norte (UCN)  
 **Actividad:** Taller ABP – Entrega 1 · Noviembre de 2026  
-**Presentacion:
+**Presentacion:** [ver presentacion](./PET_SPA_Presentacion.pdf)
 
 Aplicación nativa para Android desarrollada en **Kotlin** y **Jetpack Compose (Material Design 3)** que permite a los clientes consultar servicios de baño y arreglo estético para perros, calcular precios en **pesos colombianos (COP)** según el tamaño de la mascota, consultar disponibilidad en un calendario interactivo y gestionar sus citas desde el celular.
 
