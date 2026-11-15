@@ -250,7 +250,7 @@ El proyecto valida tanto las reglas de seguridad de **Cloud Firestore** como la 
 | `ExampleUnitTest` y `ExampleRobolectricTest` | • Verificación base de entorno JUnit y `app_name = "PET SPA"`.<br>• Catálogo oficial (`Baño básico` y `Baño premium`) y tarifas exactas en COP (`$35.000`–`$100.000`).<br>• Reglas de domingos (día de descanso) y formateo de moneda COP. | Aprobada (4/4) |
 | `PetSpaUiFlowTest` | • Desplazamiento vertical en **Inicio** mostrando héroe, ambos servicios y aviso de sincronización en la nube.<br>• Flujo completo de reserva: **Inicio** → **Servicio** → **Tamaño Mediano (`$45.000 COP`)** → **Calendario** → **Formulario** → **Confirmación** → **Mis reservas** → regreso a **Inicio** (**Próximas reservas** visible) → apertura limpia de **Reservar**. | Aprobada (2/2) |
 
-### Mockups pantalla por pantalla (con cuenta registrada: Laura Gómez)
+### Mockups pantalla por pantalla (con cuenta de prueba registrada)
 
 Los mockups visuales de las 8 pantallas del flujo autenticado en la nube se encuentran organizados en la carpeta [`mockups/`](./mockups/README.md):
 
