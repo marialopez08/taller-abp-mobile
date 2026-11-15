@@ -52,7 +52,7 @@ import com.example.domain.model.SpaSchedule
 import com.example.domain.model.SpaYearMonth
 import com.example.domain.model.TimeSlotUi
 import com.example.ui.components.BookingStepHeader
-import com.example.ui.components.LocalStorageNoticeBanner
+import com.example.ui.components.CloudSyncNoticeBanner
 import com.example.ui.theme.SlotAvailableBg
 import com.example.ui.theme.SlotAvailableBorder
 import com.example.ui.theme.SlotAvailableText
@@ -168,8 +168,8 @@ fun CalendarScreen(
           )
         }
 
-        LocalStorageNoticeBanner(
-          text = "La disponibilidad mostrada corresponde a las citas guardadas en este dispositivo.",
+        CloudSyncNoticeBanner(
+          text = "La disponibilidad de horarios se consulta en tiempo real en Firebase Firestore.",
         )
 
         Spacer(modifier = Modifier.height(6.dp))

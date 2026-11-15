@@ -53,7 +53,7 @@ enum class BookingStatus(val code: String, val displayName: String) {
 }
 
 data class SpaService(
-  val id: Long,
+  val id: String,
   val code: ServiceCode,
   val name: String,
   val description: String,
@@ -61,6 +61,35 @@ data class SpaService(
   val pricesBySize: Map<DogSize, Int>,
 ) {
   fun priceFor(size: DogSize): Int = pricesBySize[size] ?: basePriceCop
+}
+
+object SpaCatalog {
+  val SERVICES: List<SpaService> = listOf(
+    SpaService(
+      id = "bano_basico",
+      code = ServiceCode.BANO_BASICO,
+      name = "Baño básico",
+      description = "Baño completo para perros, limpieza general del pelaje, aplicación de productos especiales para mascotas y secado.",
+      basePriceCop = 35_000,
+      pricesBySize = mapOf(
+        DogSize.PEQUENO to 35_000,
+        DogSize.MEDIANO to 45_000,
+        DogSize.GRANDE to 55_000,
+      ),
+    ),
+    SpaService(
+      id = "bano_premium",
+      code = ServiceCode.BANO_PREMIUM,
+      name = "Baño premium",
+      description = "Baño completo, limada de uñas, corte de pelo y arreglo estético de la mascota.",
+      basePriceCop = 70_000,
+      pricesBySize = mapOf(
+        DogSize.PEQUENO to 70_000,
+        DogSize.MEDIANO to 85_000,
+        DogSize.GRANDE to 100_000,
+      ),
+    ),
+  )
 }
 
 data class TimeSlotDefinition(
@@ -88,6 +117,9 @@ object SpaSchedule {
 
   fun hourFor(slotId: String): Int =
     ALL_SLOTS.firstOrNull { it.id == slotId }?.hour24 ?: 0
+
+  fun slotKey(dateIso: String, timeSlotId: String): String =
+    "${dateIso}_${timeSlotId.replace(':', '-')}"
 }
 
 data class TimeSlotUi(
@@ -99,9 +131,9 @@ data class TimeSlotUi(
 )
 
 data class Appointment(
-  val id: Long,
-  val clientId: Long,
-  val petId: Long,
+  val id: String,
+  val clientId: String,
+  val petId: String,
   val clientName: String,
   val clientPhone: String,
   val petName: String,
@@ -118,14 +150,14 @@ data class Appointment(
 )
 
 data class ClientProfile(
-  val id: Long,
+  val id: String,
   val fullName: String,
   val phoneNumber: String,
 )
 
 data class PetProfile(
-  val id: Long,
-  val clientId: Long,
+  val id: String,
+  val clientId: String,
   val name: String,
   val breed: String,
   val size: DogSize,

@@ -1,9 +1,10 @@
 package com.example.ui
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.data.local.PetSpaRepository
+import com.example.data.repository.PetSpaRepository
 import com.example.domain.model.Appointment
 import com.example.domain.model.BookingCreationResult
 import com.example.domain.model.BookingStatus
@@ -16,11 +17,17 @@ import com.example.domain.model.SpaSchedule
 import com.example.domain.model.SpaService
 import com.example.domain.model.SpaYearMonth
 import com.example.domain.model.TimeSlotUi
+import com.google.firebase.firestore.FirebaseFirestoreException
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -70,21 +77,58 @@ class PetSpaViewModel(
 
   val services: StateFlow<List<SpaService>> =
     repository.observeServices()
-      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-  val occupiedSlotsByDate: StateFlow<Map<String, Set<String>>> =
-    repository.observeOccupiedSlotsByDate()
-      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
 
   val allAppointments: StateFlow<List<Appointment>> =
     repository.observeAllAppointments()
       .map { list -> sortAppointmentsUpcomingFirst(list) }
-      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+      .catch { error ->
+        val firestoreError = generateSequence(error) { it.cause }
+          .filterIsInstance<FirebaseFirestoreException>()
+          .firstOrNull()
+        if (firestoreError == null && error is CancellationException) throw error
+        Log.w(TAG, "Error observing appointments", firestoreError ?: error)
+        emit(emptyList())
+      }
+      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  private val occupiedSlotsForSelectedDate: StateFlow<Pair<String, Set<String>>> =
+    _bookingDraft
+      .map { it.selectedDate.toIsoString() }
+      .distinctUntilChanged()
+      .flatMapLatest { dateIso ->
+        repository.observeOccupiedSlotsForDate(dateIso).map { slots -> dateIso to slots }
+      }
+      .catch { error ->
+        val firestoreError = generateSequence(error) { it.cause }
+          .filterIsInstance<FirebaseFirestoreException>()
+          .firstOrNull()
+        if (firestoreError == null && error is CancellationException) throw error
+        Log.w(TAG, "Error observing occupied slots", firestoreError ?: error)
+        emit(_bookingDraft.value.selectedDate.toIsoString() to emptySet())
+      }
+      .stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
+        _bookingDraft.value.selectedDate.toIsoString() to emptySet(),
+      )
+
+  val occupiedSlotsByDate: StateFlow<Map<String, Set<String>>> =
+    combine(allAppointments, occupiedSlotsForSelectedDate) { appointments, (activeDateIso, activeDaySlots) ->
+      val map = appointments
+        .filter { it.status == BookingStatus.CONFIRMADA }
+        .groupBy(keySelector = { it.dateIso }, valueTransform = { it.timeSlotId })
+        .mapValues { (_, list) -> list.toSet() }
+        .toMutableMap()
+      map[activeDateIso] = map[activeDateIso].orEmpty() + activeDaySlots
+      map.toMap()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyMap())
 
   val upcomingAppointments: StateFlow<List<Appointment>> =
     allAppointments
       .map { list -> list.filter { it.status == BookingStatus.CONFIRMADA } }
-      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
 
   val filteredAppointments: StateFlow<List<Appointment>> =
     combine(allAppointments, _bookingsFilter) { list, filter ->
@@ -94,18 +138,26 @@ class PetSpaViewModel(
         BookingsFilter.COMPLETADAS -> list.filter { it.status == BookingStatus.COMPLETADA }
         BookingsFilter.CANCELADAS -> list.filter { it.status == BookingStatus.CANCELADA }
       }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
 
   val latestClientAndPet: StateFlow<Pair<ClientProfile, PetProfile?>?> =
     repository.observeLatestClientAndPet()
-      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+      .catch { error ->
+        val firestoreError = generateSequence(error) { it.cause }
+          .filterIsInstance<FirebaseFirestoreException>()
+          .firstOrNull()
+        if (firestoreError == null && error is CancellationException) throw error
+        Log.w(TAG, "Error observing latest client profile", firestoreError ?: error)
+        emit(null)
+      }
+      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
 
   val timeSlotsForSelectedDate: StateFlow<List<TimeSlotUi>> =
     combine(_bookingDraft, occupiedSlotsByDate) { draft, occupiedMap ->
       buildTimeSlotsForDate(draft.selectedDate, occupiedMap)
     }.stateIn(
       viewModelScope,
-      SharingStarted.WhileSubscribed(5000),
+      SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
       buildTimeSlotsForDate(_bookingDraft.value.selectedDate, emptyMap()),
     )
 
@@ -335,7 +387,7 @@ class PetSpaViewModel(
     _bookingsFilter.value = filter
   }
 
-  fun cancelAppointment(appointmentId: Long) {
+  fun cancelAppointment(appointmentId: String) {
     viewModelScope.launch {
       repository.cancelAppointment(appointmentId)
     }
@@ -382,5 +434,10 @@ class PetSpaViewModel(
       }
       throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
+  }
+
+  private companion object {
+    const val TAG = "PetSpaViewModel"
+    const val STOP_TIMEOUT_MILLIS = 5000L
   }
 }

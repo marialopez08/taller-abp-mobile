@@ -292,8 +292,8 @@ fun BookingStatusBadge(
 }
 
 @Composable
-fun LocalStorageNoticeBanner(
-  text: String = "Tus reservas se almacenan localmente en este dispositivo. Aún no existe sincronización en tiempo real entre diferentes clientes.",
+fun CloudSyncNoticeBanner(
+  text: String = "Tus reservas se sincronizan de forma segura en la nube con Firebase Firestore.",
   modifier: Modifier = Modifier,
 ) {
   Surface(

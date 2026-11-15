@@ -1,4 +1,4 @@
-package com.example.data.local
+package com.example.data.repository
 
 import com.example.domain.model.Appointment
 import com.example.domain.model.BookingCreationResult
@@ -10,8 +10,7 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * Abstracción del repositorio de datos para PET SPA.
- * Permite reemplazar el almacenamiento local Room por Firebase Firestore u otro backend
- * en futuras versiones sin modificar los ViewModels ni la interfaz de usuario.
+ * Implementado con Firebase Cloud Firestore y Firebase Authentication.
  */
 interface PetSpaRepository {
   suspend fun ensureCatalogSeeded()
@@ -19,7 +18,7 @@ interface PetSpaRepository {
 
   fun observeServices(): Flow<List<SpaService>>
   fun observeAllAppointments(): Flow<List<Appointment>>
-  fun observeOccupiedSlotsByDate(): Flow<Map<String, Set<String>>>
+  fun observeOccupiedSlotsForDate(dateIso: String): Flow<Set<String>>
   fun observeLatestClientAndPet(): Flow<Pair<ClientProfile, PetProfile?>?>
 
   suspend fun createAppointment(
@@ -35,5 +34,5 @@ interface PetSpaRepository {
     nowMillis: Long = System.currentTimeMillis(),
   ): BookingCreationResult
 
-  suspend fun cancelAppointment(appointmentId: Long)
+  suspend fun cancelAppointment(appointmentId: String)
 }

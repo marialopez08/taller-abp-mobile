@@ -3,16 +3,17 @@ package com.example
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.printToString
 import androidx.compose.ui.test.swipeUp
+import com.example.ui.PetSpaViewModel
+import com.example.ui.navigation.PetSpaApp
+import com.example.ui.theme.PetSpaTheme
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -24,10 +25,26 @@ import org.robolectric.annotation.Config
 class PetSpaUiFlowTest {
 
   @get:Rule
-  val composeTestRule = createAndroidComposeRule<MainActivity>()
+  val composeTestRule = createComposeRule()
+
+  private fun launchPetSpaApp() {
+    val repository = InMemoryTestPetSpaRepository()
+    val viewModel = PetSpaViewModel(repository)
+    composeTestRule.setContent {
+      PetSpaTheme {
+        PetSpaApp(
+          viewModel = viewModel,
+          userDisplayName = "Ana María",
+          onSignOutClick = {},
+        )
+      }
+    }
+  }
 
   @Test
   fun `home screen scrolls down to reveal both services and footer`() {
+    launchPetSpaApp()
+
     composeTestRule.waitUntil(timeoutMillis = 5000) {
       composeTestRule
         .onAllNodes(hasTestTag("home_select_service_bano_basico"))
@@ -45,6 +62,8 @@ class PetSpaUiFlowTest {
 
   @Test
   fun `complete booking flow scrolls and saves appointment`() {
+    launchPetSpaApp()
+
     composeTestRule.waitUntil(timeoutMillis = 5000) {
       composeTestRule
         .onAllNodes(hasTestTag("home_book_cta_button"))

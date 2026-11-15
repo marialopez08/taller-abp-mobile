@@ -5,5 +5,5 @@
     <string name="nav_home">Inicio</string>
     <string name="nav_book">Reservar</string>
     <string name="nav_my_bookings">Mis reservas</string>
-    <string name="local_storage_notice">Las reservas se guardan únicamente en este dispositivo. Aún no existe sincronización en tiempo real entre diferentes clientes.</string>
+    <string name="cloud_sync_notice">Tus reservas se sincronizan de forma segura en la nube con Firebase Firestore.</string>
 </resources>

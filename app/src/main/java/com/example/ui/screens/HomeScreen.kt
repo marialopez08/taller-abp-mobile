@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Pets
 import androidx.compose.material.icons.rounded.Schedule
@@ -30,6 +31,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -43,13 +45,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.domain.model.Appointment
 import com.example.domain.model.SpaDateUtils
 import com.example.domain.model.SpaService
 import com.example.ui.components.BookingStatusBadge
-import com.example.ui.components.LocalStorageNoticeBanner
+import com.example.ui.components.CloudSyncNoticeBanner
 import com.example.ui.components.ServiceShowcaseCard
 
 @Composable
@@ -59,6 +62,8 @@ fun HomeScreen(
   onBookAppointmentClick: () -> Unit,
   onSelectServiceClick: (SpaService) -> Unit,
   onViewAllBookingsClick: () -> Unit,
+  userDisplayName: String? = null,
+  onSignOutClick: (() -> Unit)? = null,
   modifier: Modifier = Modifier,
 ) {
   val scrollState = rememberScrollState()
@@ -76,7 +81,10 @@ fun HomeScreen(
         .testTag("home_lazy_column"),
       verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-      HomeBrandHeader()
+      HomeBrandHeader(
+        userDisplayName = userDisplayName,
+        onSignOutClick = onSignOutClick,
+      )
 
       HomeHeroCard(onBookAppointmentClick = onBookAppointmentClick)
 
@@ -128,20 +136,24 @@ fun HomeScreen(
         )
       }
 
-      LocalStorageNoticeBanner()
+      CloudSyncNoticeBanner()
       Spacer(modifier = Modifier.height(8.dp))
     }
   }
 }
 
 @Composable
-private fun HomeBrandHeader() {
+private fun HomeBrandHeader(
+  userDisplayName: String? = null,
+  onSignOutClick: (() -> Unit)? = null,
+) {
   Row(
     modifier = Modifier.fillMaxWidth(),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.SpaceBetween,
   ) {
     Row(
+      modifier = Modifier.weight(1f),
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -174,34 +186,59 @@ private fun HomeBrandHeader() {
           fontWeight = FontWeight.ExtraBold,
         )
         Text(
-          text = "Baño, peluquería y bienestar canino",
+          text = if (!userDisplayName.isNullOrBlank()) {
+            "Hola, $userDisplayName"
+          } else {
+            "Baño, peluquería y bienestar canino"
+          },
           style = MaterialTheme.typography.bodySmall,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
         )
       }
     }
 
-    Surface(
-      shape = RoundedCornerShape(50),
-      color = MaterialTheme.colorScheme.tertiaryContainer,
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-      Row(
-        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+      Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.tertiaryContainer,
       ) {
-        Icon(
-          imageVector = Icons.Rounded.Spa,
-          contentDescription = null,
-          tint = MaterialTheme.colorScheme.tertiary,
-          modifier = Modifier.size(16.dp),
-        )
-        Text(
-          text = "Lun - Sáb",
-          style = MaterialTheme.typography.labelMedium,
-          color = MaterialTheme.colorScheme.onTertiaryContainer,
-          fontWeight = FontWeight.SemiBold,
-        )
+        Row(
+          modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+          Icon(
+            imageVector = Icons.Rounded.Spa,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.tertiary,
+            modifier = Modifier.size(16.dp),
+          )
+          Text(
+            text = "Lun - Sáb",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onTertiaryContainer,
+            fontWeight = FontWeight.SemiBold,
+          )
+        }
+      }
+      if (onSignOutClick != null) {
+        IconButton(
+          onClick = onSignOutClick,
+          modifier = Modifier
+            .size(48.dp)
+            .testTag("sign_out_button"),
+        ) {
+          Icon(
+            imageVector = Icons.AutoMirrored.Rounded.Logout,
+            contentDescription = "Cerrar sesión",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+        }
       }
     }
   }

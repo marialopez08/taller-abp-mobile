@@ -1,5 +1,6 @@
 package com.example.ui.navigation
 
+import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
@@ -9,11 +10,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.EventNote
+import androidx.compose.material.icons.automirrored.rounded.EventNote
 import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.EventNote
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.rounded.CalendarMonth
-import androidx.compose.material.icons.rounded.EventNote
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -26,19 +27,32 @@ import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.CredentialManager
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.R
+import com.example.data.remote.FirestorePetSpaRepository
 import com.example.ui.PetSpaViewModel
+import com.example.ui.screens.AuthScreen
 import com.example.ui.screens.BookingConfirmationScreen
 import com.example.ui.screens.BookingFormScreen
 import com.example.ui.screens.CalendarScreen
@@ -46,6 +60,17 @@ import com.example.ui.screens.DogSizeScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.MyBookingsScreen
 import com.example.ui.screens.ServiceSelectionScreen
+import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.auth
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 object PetSpaRoutes {
   const val HOME = "inicio"
@@ -81,8 +106,8 @@ private enum class TopLevelTab(
   MY_BOOKINGS(
     route = PetSpaRoutes.MY_BOOKINGS,
     label = "Mis reservas",
-    selectedIcon = Icons.Rounded.EventNote,
-    unselectedIcon = Icons.Outlined.EventNote,
+    selectedIcon = Icons.AutoMirrored.Rounded.EventNote,
+    unselectedIcon = Icons.AutoMirrored.Outlined.EventNote,
     testTag = "nav_tab_my_bookings",
   );
 
@@ -96,9 +121,72 @@ private enum class TopLevelTab(
   }
 }
 
+internal fun FirebaseAuth.authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
+  val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+    trySend(firebaseAuth.currentUser)
+  }
+  addAuthStateListener(listener)
+  awaitClose { removeAuthStateListener(listener) }
+}
+
+@Composable
+fun PetSpaRoot(
+  auth: FirebaseAuth = remember { Firebase.auth },
+) {
+  val context = LocalContext.current
+  val scope = rememberCoroutineScope()
+  val currentUser by auth.authStateFlow().collectAsStateWithLifecycle(initialValue = auth.currentUser)
+  val user = currentUser
+  if (user == null) {
+    AuthScreen(auth = auth)
+  } else {
+    key(user.uid) {
+      val viewModel: PetSpaViewModel = viewModel(
+        key = user.uid,
+        factory = viewModelFactory {
+          initializer {
+            val app = checkNotNull(this[APPLICATION_KEY]) {
+              "APPLICATION_KEY missing from CreationExtras"
+            }
+            val databaseId = app.getString(R.string.firestore_database_id)
+            val db = FirebaseFirestore.getInstance(databaseId)
+            val repository = FirestorePetSpaRepository(
+              db = db,
+              currentUserId = user.uid,
+              currentUserDisplayName = user.displayName.orEmpty(),
+              currentUserEmail = user.email.orEmpty(),
+            )
+            PetSpaViewModel(repository)
+          }
+        },
+      )
+      val greetingName = user.displayName?.takeIf { it.isNotBlank() } ?: user.email
+      PetSpaApp(
+        viewModel = viewModel,
+        userDisplayName = greetingName,
+        onSignOutClick = {
+          scope.launch {
+            withContext(NonCancellable) {
+              try {
+                CredentialManager.create(context).clearCredentialState(ClearCredentialStateRequest())
+              } catch (e: Exception) {
+                Log.w("Auth", "Failed to clear credential state: ${e.message}")
+              } finally {
+                auth.signOut()
+              }
+            }
+          }
+        },
+      )
+    }
+  }
+}
+
 @Composable
 fun PetSpaApp(
   viewModel: PetSpaViewModel,
+  userDisplayName: String? = null,
+  onSignOutClick: (() -> Unit)? = null,
 ) {
   val navController = rememberNavController()
   val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -221,6 +309,8 @@ fun PetSpaApp(
                 onBookAppointmentClick = { startBookingFlow() },
                 onSelectServiceClick = { service -> startBookingFlow(service.code.code) },
                 onViewAllBookingsClick = { navigateToTab(TopLevelTab.MY_BOOKINGS) },
+                userDisplayName = userDisplayName,
+                onSignOutClick = onSignOutClick,
               )
             }
 
@@ -304,7 +394,7 @@ fun PetSpaApp(
                   },
                 )
               } else {
-                androidx.compose.runtime.LaunchedEffect(Unit) {
+                LaunchedEffect(Unit) {
                   navController.navigate(PetSpaRoutes.HOME) {
                     popUpTo(PetSpaRoutes.HOME) { inclusive = false }
                     launchSingleTop = true

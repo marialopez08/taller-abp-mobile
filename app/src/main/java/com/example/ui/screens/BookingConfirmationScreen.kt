@@ -115,7 +115,7 @@ fun BookingConfirmationScreen(
         )
 
         Text(
-          text = "Guardamos tu cita en este dispositivo. El horario seleccionado quedó reservado para ${appointment.petName}.",
+          text = "Guardamos tu cita en la nube con Firebase. El horario seleccionado quedó reservado para ${appointment.petName}.",
           style = MaterialTheme.typography.bodyMedium,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
           textAlign = TextAlign.Center,

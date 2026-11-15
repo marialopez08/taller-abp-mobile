@@ -60,14 +60,14 @@ import com.example.domain.model.BookingStatus
 import com.example.domain.model.SpaDateUtils
 import com.example.ui.BookingsFilter
 import com.example.ui.components.BookingStatusBadge
-import com.example.ui.components.LocalStorageNoticeBanner
+import com.example.ui.components.CloudSyncNoticeBanner
 
 @Composable
 fun MyBookingsScreen(
   appointments: List<Appointment>,
   activeFilter: BookingsFilter,
   onSelectFilter: (BookingsFilter) -> Unit,
-  onCancelAppointment: (Long) -> Unit,
+  onCancelAppointment: (String) -> Unit,
   onBookNewClick: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -169,7 +169,7 @@ fun MyBookingsScreen(
       }
 
       item {
-        LocalStorageNoticeBanner()
+        CloudSyncNoticeBanner()
       }
     }
   }

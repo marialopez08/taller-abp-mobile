@@ -1,48 +1,37 @@
 package com.example
 
 import android.content.Context
-import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import com.example.data.local.LocalRoomPetSpaRepository
-import com.example.data.local.PetSpaDatabase
+import com.example.data.repository.PetSpaRepository
+import com.example.domain.model.Appointment
 import com.example.domain.model.BookingCreationResult
 import com.example.domain.model.BookingStatus
+import com.example.domain.model.ClientProfile
 import com.example.domain.model.DogSize
+import com.example.domain.model.PetProfile
 import com.example.domain.model.ServiceCode
+import com.example.domain.model.SpaCatalog
 import com.example.domain.model.SpaDate
 import com.example.domain.model.SpaDateUtils
+import com.example.domain.model.SpaService
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.UUID
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
 class ExampleRobolectricTest {
-
-  private lateinit var db: PetSpaDatabase
-  private lateinit var repository: LocalRoomPetSpaRepository
-
-  @Before
-  fun setup() {
-    val context = ApplicationProvider.getApplicationContext<Context>()
-    db = Room.inMemoryDatabaseBuilder(context, PetSpaDatabase::class.java)
-      .allowMainThreadQueries()
-      .build()
-    repository = LocalRoomPetSpaRepository(db.petSpaDao())
-  }
-
-  @After
-  fun tearDown() {
-    db.close()
-  }
 
   @Test
   fun `app name matches PET SPA`() {
@@ -52,10 +41,9 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun `catalog seeds services and exact COP prices with zero fake bookings`() = runBlocking {
-    repository.ensureCatalogSeeded()
-
-    val services = repository.observeServices().first()
+  fun `catalog defines services and exact COP prices`() = runBlocking {
+    val repo = InMemoryTestPetSpaRepository()
+    val services = repo.observeServices().first()
     assertEquals(2, services.size)
 
     val basic = services.first { it.code == ServiceCode.BANO_BASICO }
@@ -68,68 +56,8 @@ class ExampleRobolectricTest {
     assertEquals(85_000, premium.priceFor(DogSize.MEDIANO))
     assertEquals(100_000, premium.priceFor(DogSize.GRANDE))
 
-    val appointments = repository.observeAllAppointments().first()
+    val appointments = repo.observeAllAppointments().first()
     assertTrue(appointments.isEmpty())
-  }
-
-  @Test
-  fun `booking prevents double booking and cancellation frees slot`() = runBlocking {
-    repository.ensureCatalogSeeded()
-    val services = repository.observeServices().first()
-    val premium = services.first { it.code == ServiceCode.BANO_PREMIUM }
-
-    // Find a future non-Sunday date
-    var targetDate = SpaDateUtils.today().plusDays(2)
-    if (targetDate.isSunday()) targetDate = targetDate.plusDays(1)
-    val dateIso = targetDate.toIsoString()
-
-    val firstResult = repository.createAppointment(
-      clientName = "Laura Gómez",
-      clientPhone = "3001234567",
-      petName = "Toby",
-      petBreed = "Golden Retriever",
-      dogSize = DogSize.GRANDE,
-      service = premium,
-      dateIso = dateIso,
-      timeSlotId = "10:00",
-      timeSlotLabel = "10:00 a. m.",
-    )
-    assertTrue(firstResult is BookingCreationResult.Success)
-    val created = (firstResult as BookingCreationResult.Success).appointment
-    assertEquals(100_000, created.priceCop)
-    assertEquals(BookingStatus.CONFIRMADA, created.status)
-
-    // Attempt duplicate booking on same date & time slot
-    val duplicateResult = repository.createAppointment(
-      clientName = "Carlos Ruiz",
-      clientPhone = "3117654321",
-      petName = "Luna",
-      petBreed = "",
-      dogSize = DogSize.PEQUENO,
-      service = premium,
-      dateIso = dateIso,
-      timeSlotId = "10:00",
-      timeSlotLabel = "10:00 a. m.",
-    )
-    assertTrue(duplicateResult is BookingCreationResult.SlotAlreadyTaken)
-
-    // Cancel first booking -> slot should become available again
-    repository.cancelAppointment(created.id)
-    val occupiedAfterCancel = repository.observeOccupiedSlotsByDate().first()[dateIso].orEmpty()
-    assertFalse("10:00" in occupiedAfterCancel)
-
-    val rebookedResult = repository.createAppointment(
-      clientName = "Carlos Ruiz",
-      clientPhone = "3117654321",
-      petName = "Luna",
-      petBreed = "",
-      dogSize = DogSize.PEQUENO,
-      service = premium,
-      dateIso = dateIso,
-      timeSlotId = "10:00",
-      timeSlotLabel = "10:00 a. m.",
-    )
-    assertTrue(rebookedResult is BookingCreationResult.Success)
   }
 
   @Test
@@ -137,12 +65,79 @@ class ExampleRobolectricTest {
     assertEquals("$35.000 COP", SpaDateUtils.formatCop(35_000))
     assertEquals("$100.000 COP", SpaDateUtils.formatCop(100_000))
 
-    // 2026-11-15 is a Sunday
     val sunday = SpaDate(2026, 11, 15)
     assertTrue(sunday.isSunday())
 
-    // 2026-11-14 is a Saturday
     val saturday = SpaDate(2026, 11, 14)
     assertFalse(saturday.isSunday())
+  }
+}
+
+class InMemoryTestPetSpaRepository : PetSpaRepository {
+  private val appointmentsState = MutableStateFlow<List<Appointment>>(emptyList())
+  private val profileState = MutableStateFlow<Pair<ClientProfile, PetProfile?>?>(null)
+
+  override suspend fun ensureCatalogSeeded() = Unit
+
+  override suspend fun refreshPastAppointmentsStatus(nowMillis: Long) = Unit
+
+  override fun observeServices(): Flow<List<SpaService>> = flowOf(SpaCatalog.SERVICES)
+
+  override fun observeAllAppointments(): Flow<List<Appointment>> = appointmentsState
+
+  override fun observeOccupiedSlotsForDate(dateIso: String): Flow<Set<String>> =
+    appointmentsState.map { list ->
+      list.filter { it.dateIso == dateIso && it.status == BookingStatus.CONFIRMADA }
+        .map { it.timeSlotId }
+        .toSet()
+    }
+
+  override fun observeLatestClientAndPet(): Flow<Pair<ClientProfile, PetProfile?>?> = profileState
+
+  override suspend fun createAppointment(
+    clientName: String,
+    clientPhone: String,
+    petName: String,
+    petBreed: String,
+    dogSize: DogSize,
+    service: SpaService,
+    dateIso: String,
+    timeSlotId: String,
+    timeSlotLabel: String,
+    nowMillis: Long,
+  ): BookingCreationResult {
+    val alreadyTaken = appointmentsState.value.any {
+      it.dateIso == dateIso && it.timeSlotId == timeSlotId && it.status == BookingStatus.CONFIRMADA
+    }
+    if (alreadyTaken) return BookingCreationResult.SlotAlreadyTaken
+
+    val created = Appointment(
+      id = UUID.randomUUID().toString(),
+      clientId = "test_user",
+      petId = "test_pet",
+      clientName = clientName.trim(),
+      clientPhone = clientPhone.trim(),
+      petName = petName.trim(),
+      petBreed = petBreed.trim(),
+      serviceCode = service.code,
+      serviceName = service.name,
+      dogSize = dogSize,
+      dateIso = dateIso,
+      timeSlotId = timeSlotId,
+      timeSlotLabel = timeSlotLabel,
+      priceCop = service.priceFor(dogSize),
+      status = BookingStatus.CONFIRMADA,
+      createdAt = nowMillis,
+    )
+    appointmentsState.value = appointmentsState.value + created
+    profileState.value = ClientProfile("test_user", created.clientName, created.clientPhone) to
+      PetProfile("test_pet", "test_user", created.petName, created.petBreed, dogSize)
+    return BookingCreationResult.Success(created)
+  }
+
+  override suspend fun cancelAppointment(appointmentId: String) {
+    appointmentsState.value = appointmentsState.value.map { appt ->
+      if (appt.id == appointmentId) appt.copy(status = BookingStatus.CANCELADA) else appt
+    }
   }
 }

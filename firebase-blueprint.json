@@ -1,0 +1,190 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Perfil del cliente autenticado con sus datos recientes para agilizar reservas en PET SPA.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "UID de Firebase Auth del propietario."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Nombre visible de la cuenta de Google."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Correo electrónico verificado de la cuenta."
+        },
+        "lastClientName": {
+          "type": "string",
+          "description": "Último nombre de cliente utilizado en una reserva."
+        },
+        "lastClientPhone": {
+          "type": "string",
+          "description": "Último número de celular utilizado en una reserva."
+        },
+        "lastPetName": {
+          "type": "string",
+          "description": "Nombre de la última mascota registrada."
+        },
+        "lastPetBreed": {
+          "type": "string",
+          "description": "Raza opcional de la última mascota registrada."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Marca temporal del servidor en la creación (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Marca temporal del servidor en la última actualización (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "createdAt", "updatedAt"]
+    },
+    "AppointmentRecord": {
+      "title": "AppointmentRecord",
+      "description": "Reserva de baño o arreglo canino en PET SPA perteneciente a un cliente autenticado.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "UID de Firebase Auth del propietario de la cita."
+        },
+        "clientName": {
+          "type": "string",
+          "description": "Nombre completo del cliente."
+        },
+        "clientPhone": {
+          "type": "string",
+          "description": "Teléfono celular de contacto del cliente."
+        },
+        "petName": {
+          "type": "string",
+          "description": "Nombre del perro."
+        },
+        "petBreed": {
+          "type": "string",
+          "description": "Raza opcional del perro."
+        },
+        "serviceCode": {
+          "type": "string",
+          "enum": ["BANO_BASICO", "BANO_PREMIUM"],
+          "description": "Código del servicio seleccionado."
+        },
+        "serviceName": {
+          "type": "string",
+          "description": "Nombre legible del servicio."
+        },
+        "dogSizeCode": {
+          "type": "string",
+          "enum": ["PEQUENO", "MEDIANO", "GRANDE"],
+          "description": "Código del tamaño del perro."
+        },
+        "dateIso": {
+          "type": "string",
+          "description": "Fecha de la cita en formato YYYY-MM-DD."
+        },
+        "timeSlotId": {
+          "type": "string",
+          "enum": ["08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00"],
+          "description": "Identificador de franja horaria."
+        },
+        "timeSlotLabel": {
+          "type": "string",
+          "description": "Etiqueta legible del horario en español."
+        },
+        "slotKey": {
+          "type": "string",
+          "description": "Clave única de bloqueo de franja (YYYY-MM-DD_HH-00)."
+        },
+        "priceCop": {
+          "type": "integer",
+          "description": "Valor final calculado en pesos colombianos (COP)."
+        },
+        "statusCode": {
+          "type": "string",
+          "enum": ["CONFIRMADA", "CANCELADA", "COMPLETADA"],
+          "description": "Estado actual de la cita."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Marca temporal del servidor al crear la cita (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Marca temporal del servidor al actualizar la cita (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "clientName",
+        "clientPhone",
+        "petName",
+        "petBreed",
+        "serviceCode",
+        "serviceName",
+        "dogSizeCode",
+        "dateIso",
+        "timeSlotId",
+        "timeSlotLabel",
+        "slotKey",
+        "priceCop",
+        "statusCode",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "OccupiedSlot": {
+      "title": "OccupiedSlot",
+      "description": "Bloqueo atómico de horario ocupado para evitar reservas duplicadas sin exponer PII.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "UID del usuario que reservó el horario."
+        },
+        "appointmentId": {
+          "type": "string",
+          "description": "ID del documento de cita asociado en users/{userId}/appointments."
+        },
+        "dateIso": {
+          "type": "string",
+          "description": "Fecha reservada en formato YYYY-MM-DD."
+        },
+        "timeSlotId": {
+          "type": "string",
+          "enum": ["08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00"],
+          "description": "Franja horaria ocupada."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Marca temporal del servidor al bloquear el horario (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "appointmentId", "dateIso", "timeSlotId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Perfil privado del cliente autenticado y últimos datos de reserva."
+    },
+    "/users/{userId}/appointments/{appointmentId}": {
+      "schema": { "$ref": "#/entities/AppointmentRecord" },
+      "description": "Citas reservadas por el cliente autenticado."
+    },
+    "/occupied_slots/{slotKey}": {
+      "schema": { "$ref": "#/entities/OccupiedSlot" },
+      "description": "Índice atómico de horarios ocupados por fecha y franja horaria."
+    }
+  }
+}
